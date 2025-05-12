@@ -3,6 +3,9 @@ const axios = require('axios');
 const fs = require('fs-extra');
 const { exec } = require('child_process');
 require('dotenv').config();
+const path = require('path');
+const printer = require("pdf-to-printer");
+const PDFDocument = require('pdfkit');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -26,20 +29,34 @@ async function descargarArchivo(fileId, fileName, bot) {
 }
 
 // Función para abrir archivo y simular Ctrl+P
-const path = require('path');
-const printer = require("pdf-to-printer");
 
-function abrirArchivoParaRevisarYImprimir(filePath) {
+async function abrirArchivoParaRevisarYImprimir(filePath) {
   const absolutePath = path.resolve(filePath);
 
   if (absolutePath.toLowerCase().endsWith('.pdf')) {
-    // Si es un PDF, imprimir directamente
+    // Imprimir PDF
     printer
       .print(absolutePath)
       .then(() => console.log('🖨️ PDF enviado a la impresora'))
       .catch((err) => console.error('❌ Error al imprimir PDF:', err));
+  } else if (/\.(jpg|jpeg|png|bmp)$/i.test(absolutePath)) {
+    // Convertir imagen a PDF e imprimir
+    const pdfTempPath = absolutePath.replace(path.extname(absolutePath), '.pdf');
+    try {
+      await convertirImagenAPdf(absolutePath, pdfTempPath);
+      await printer.print(pdfTempPath);
+      console.log('🖼️ Imagen convertida y enviada a la impresora');
+
+      // Borrar imagen y PDF después de 1 minuto
+      setTimeout(() => {
+        fs.unlink(absolutePath).catch(console.error);
+        fs.unlink(pdfTempPath).catch(console.error);
+      }, 60 * 1000);
+    } catch (err) {
+      console.error('❌ Error al imprimir imagen:', err);
+    }
   } else {
-    // Si no es PDF, abrir para revisión
+    // Otro tipo de archivo: abrir para revisión
     exec(`start "" "${absolutePath}"`, (err) => {
       if (err) {
         console.error('❌ Error al abrir archivo:', err);
@@ -47,12 +64,37 @@ function abrirArchivoParaRevisarYImprimir(filePath) {
       }
       console.log('📂 Archivo abierto para revisión.');
 
-      // Opcional: eliminar luego de un tiempo
+      // Borrar después de 1 minuto
       setTimeout(() => {
-        fs.unlink(filePath).catch(console.error);
+        fs.unlink(absolutePath).catch(console.error);
       }, 60 * 1000);
     });
   }
+}
+
+
+// Esta es la forma correcta de convertir una imagen a PDF usando image-to-pdf
+async function convertirImagenAPdf(imagenPath, destinoPdfPath) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ autoFirstPage: false });
+    const writeStream = fs.createWriteStream(destinoPdfPath);
+
+    doc.pipe(writeStream);
+
+    const image = doc.openImage ? doc.openImage(imagenPath) : imagenPath;
+
+    doc.addPage({ size: 'A4', layout: 'portrait' });
+    doc.image(image, {
+      fit: [500, 750],
+      align: 'center',
+      valign: 'center'
+    });
+
+    doc.end();
+
+    writeStream.on('finish', () => resolve(destinoPdfPath));
+    writeStream.on('error', reject);
+  });
 }
 
 
@@ -65,7 +107,7 @@ bot.on('photo', async (ctx) => {
   try {
     const filePath = await descargarArchivo(fileId, fileName, bot);
     abrirArchivoParaRevisarYImprimir(filePath);
-    await ctx.reply('🖼️ Foto recibida. Mostrando para impresión');
+    await ctx.reply('🖼️ Foto recibida. Se envio para impresión');
   } catch (e) {
     console.error(e);
     await ctx.reply('❌ Error al procesar la foto.');
@@ -81,7 +123,7 @@ bot.on('document', async (ctx) => {
   try {
     const filePath = await descargarArchivo(fileId, fileName, bot);
     abrirArchivoParaRevisarYImprimir(filePath);
-    await ctx.reply('📄 Documento recibido. Mostrando para impresión');
+    await ctx.reply('📄 Documento recibido. Se envio para impresión');
   } catch (e) {
     console.error(e);
     await ctx.reply('❌ Error al procesar el documento.');
