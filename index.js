@@ -26,26 +26,34 @@ async function descargarArchivo(fileId, fileName, bot) {
 }
 
 // Función para abrir archivo y simular Ctrl+P
-function abrirArchivoParaRevisarYImprimir(filePath) {
-  const ext = filePath.toLowerCase().split('.').pop();
-  
-  // Abre el archivo con la app predeterminada (Windows)
-  exec(`start "" "${filePath}"`, (err) => {
-    if (err) {
-      console.error('Error al abrir archivo:', err);
-    } else {      
-      // 🧹 Eliminar archivo después de 1 minuto
-      setTimeout(() => {
-        fs.unlink(filePath, (err) => {
-          if (err) {
-            console.error('Error al eliminar archivo temporal:', err);
-          }
-        });
-      }, 60 * 1000); // 60 segundos
-    }
-  });
-}
+const path = require('path');
+const printer = require("pdf-to-printer");
 
+function abrirArchivoParaRevisarYImprimir(filePath) {
+  const absolutePath = path.resolve(filePath);
+
+  if (absolutePath.toLowerCase().endsWith('.pdf')) {
+    // Si es un PDF, imprimir directamente
+    printer
+      .print(absolutePath)
+      .then(() => console.log('🖨️ PDF enviado a la impresora'))
+      .catch((err) => console.error('❌ Error al imprimir PDF:', err));
+  } else {
+    // Si no es PDF, abrir para revisión
+    exec(`start "" "${absolutePath}"`, (err) => {
+      if (err) {
+        console.error('❌ Error al abrir archivo:', err);
+        return;
+      }
+      console.log('📂 Archivo abierto para revisión.');
+
+      // Opcional: eliminar luego de un tiempo
+      setTimeout(() => {
+        fs.unlink(filePath).catch(console.error);
+      }, 60 * 1000);
+    });
+  }
+}
 
 
 // Al recibir fotos
