@@ -30,64 +30,14 @@ async function descargarArchivo(fileId, fileName, bot) {
 
 // Función para abrir archivo y simular Ctrl+P
 
-// async function abrirArchivoParaRevisarYImprimir(filePath) {
-//   const absolutePath = path.resolve(filePath);
-
-//   if (absolutePath.toLowerCase().endsWith('.pdf')) {
-//     // Imprimir PDF
-//     printer
-//       .print(absolutePath)
-//       .then(() => console.log('🖨️ PDF enviado a la impresora'))
-//       .catch((err) => console.error('❌ Error al imprimir PDF:', err));
-//   } else if (/\.(jpg|jpeg|png|bmp)$/i.test(absolutePath)) {
-//     // Convertir imagen a PDF e imprimir
-//     const pdfTempPath = absolutePath.replace(path.extname(absolutePath), '.pdf');
-//     try {
-//       await convertirImagenAPdf(absolutePath, pdfTempPath);
-//       await printer.print(pdfTempPath);
-//       console.log('🖼️ Imagen convertida y enviada a la impresora');
-
-//       // Borrar imagen y PDF después de 1 minuto
-//       setTimeout(() => {
-//         fs.unlink(absolutePath).catch(console.error);
-//         fs.unlink(pdfTempPath).catch(console.error);
-//       }, 60 * 1000);
-//     } catch (err) {
-//       console.error('❌ Error al imprimir imagen:', err);
-//     }
-//   } else {
-//     // Otro tipo de archivo: abrir para revisión
-//     exec(`start "" "${absolutePath}"`, (err) => {
-//       if (err) {
-//         console.error('❌ Error al abrir archivo:', err);
-//         return;
-//       }
-//       console.log('📂 Archivo abierto para revisión.');
-
-//       // Borrar después de 1 minuto
-//       setTimeout(() => {
-//         fs.unlink(absolutePath).catch(console.error);
-//       }, 60 * 1000);
-//     });
-//   }
-// }
-
-const os = require('os');
-
 async function abrirArchivoParaRevisarYImprimir(filePath) {
   const absolutePath = path.resolve(filePath);
-  const sistemaOperativo = os.platform(); // 'win32', 'linux', 'darwin'
-
-  if (sistemaOperativo !== 'win32') {
-    console.warn('⚠️ El sistema operativo no es Windows. Impresión deshabilitada.');
-    return;
-  }
 
   if (absolutePath.toLowerCase().endsWith('.pdf')) {
     // Imprimir PDF
     printer
       .print(absolutePath)
-      .then(() => console.log('🖨️ PDF enviado a la impresora (Windows)'))
+      .then(() => console.log('🖨️ PDF enviado a la impresora'))
       .catch((err) => console.error('❌ Error al imprimir PDF:', err));
   } else if (/\.(jpg|jpeg|png|bmp)$/i.test(absolutePath)) {
     // Convertir imagen a PDF e imprimir
@@ -121,6 +71,8 @@ async function abrirArchivoParaRevisarYImprimir(filePath) {
     });
   }
 }
+
+
 
 
 
